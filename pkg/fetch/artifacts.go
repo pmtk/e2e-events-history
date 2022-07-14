@@ -36,10 +36,11 @@ var (
 )
 
 type JobRun struct {
-	Job     string
-	ID      string
-	Path    string
-	Started time.Time
+	Job      string
+	ID       string
+	Path     string
+	Started  time.Time
+	Finished time.Time
 }
 
 // job "periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node", time.Date(2022, 7, 5, 0, 0, 0, 0, time.UTC)
@@ -70,8 +71,24 @@ func getListOfJobRuns(ctx context.Context, jobName string) ([]JobRun, error) {
 
 	bucket := client.Bucket(bucketName)
 	query := &storage.Query{Delimiter: "/", Prefix: path.Join(bucketRootPath, jobName) + "/"}
-	started := struct{ Timestamp int64 }{Timestamp: int64(0)}
 	runs := []JobRun{}
+
+	getTimestampFromFile := func(prefix, filename string) (time.Time, error) {
+		rc, err := bucket.Object(prefix + filename).NewReader(ctx)
+		if err != nil {
+			return time.Time{}, err
+		}
+		defer rc.Close()
+
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(rc)
+		unixTimestamp := struct{ Timestamp int64 }{Timestamp: int64(0)}
+		if err := json.Unmarshal(buf.Bytes(), &unixTimestamp); err != nil {
+			return time.Time{}, err
+		}
+		return time.Unix(unixTimestamp.Timestamp, 0).UTC(), nil
+
+	}
 
 	it := bucket.Objects(ctx, query)
 	for {
@@ -86,26 +103,28 @@ func getListOfJobRuns(ctx context.Context, jobName string) ([]JobRun, error) {
 			continue
 		}
 
-		startedFile := bucket.Object(attrs.Prefix + "started.json")
-		rc, err := startedFile.NewReader(ctx)
+		var t time.Time
+		_ = t
+
+		started, err := getTimestampFromFile(attrs.Prefix, "started.json")
 		if err != nil {
 			return nil, err
 		}
-		defer rc.Close()
-
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(rc)
-		if err := json.Unmarshal(buf.Bytes(), &started); err != nil {
+		finished, err := getTimestampFromFile(attrs.Prefix, "finished.json")
+		if err != nil {
+			if started.Unix() != 0 {
+				// job started but didn't finished yet
+				continue
+			}
 			return nil, err
 		}
-		s := time.Unix(started.Timestamp, 0).UTC()
 
 		prefixSplit := strings.Split(attrs.Prefix, "/")
 		id := prefixSplit[len(prefixSplit)-1]
 		if id == "" {
 			id = prefixSplit[len(prefixSplit)-2]
 		}
-		runs = append(runs, JobRun{Job: jobName, ID: id, Path: attrs.Prefix, Started: s})
+		runs = append(runs, JobRun{Job: jobName, ID: id, Path: attrs.Prefix, Started: started, Finished: finished})
 	}
 
 	return runs, nil
@@ -121,6 +140,18 @@ func fetchJobRunArtifact(run JobRun, workdir string) error {
 
 	bucket := client.Bucket(bucketName)
 	query := &storage.Query{Prefix: run.Path}
+
+	saveTime := func(t time.Time, filepath string) error {
+		ms, err := t.MarshalText()
+		if err != nil {
+			return err
+		}
+		err = ioutil.WriteFile(filepath, []byte(ms), 0644)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 
 	it := bucket.Objects(ctx, query)
 	for {
@@ -147,7 +178,6 @@ func fetchJobRunArtifact(run JobRun, workdir string) error {
 			return err
 		}
 
-		// f := bucket.Object(attrs.Name)
 		rc, err := bucket.Object(attrs.Name).NewReader(ctx)
 		if err != nil {
 			return err
@@ -162,12 +192,11 @@ func fetchJobRunArtifact(run JobRun, workdir string) error {
 		if err := writer.Flush(); err != nil {
 			return err
 		}
-		ms, err := run.Started.MarshalText()
-		if err != nil {
+
+		if err := saveTime(run.Started, path.Join(dir, "started")); err != nil {
 			return err
 		}
-		err = ioutil.WriteFile(path.Join(dir, "started"), []byte(ms), 0644)
-		if err != nil {
+		if err := saveTime(run.Finished, path.Join(dir, "finished")); err != nil {
 			return err
 		}
 	}

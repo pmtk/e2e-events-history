@@ -102,9 +102,11 @@ func (il *CIEventIntervalList) ToMappedEvents() map[string]Event {
 }
 
 type Run struct {
-	ID      string
-	Started time.Time
-	Events  map[string]Event
+	ID       string
+	Started  time.Time
+	Finished time.Time
+	Duration string
+	Events   map[string]Event
 }
 
 type Job struct {
@@ -176,22 +178,36 @@ func processCachedJob(jobName, workdir string) (*Job, error) {
 }
 
 func loadOrigRunFiles(runDirPath string) (*Run, error) {
+	readTimestampFile := func(filepath string, t *time.Time) error {
+		data, err := ioutil.ReadFile(filepath)
+		if err != nil {
+			return err
+		}
+		if err := t.UnmarshalText(data); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	jobRunFiles, err := ioutil.ReadDir(runDirPath)
 	if err != nil {
 		return nil, err
 	}
 
 	eil := &CIEventIntervalList{}
-	started := &time.Time{}
 
+	r := &Run{}
 	for _, f := range jobRunFiles {
 		path := path.Join(runDirPath, f.Name())
+
 		if f.Name() == "started" {
-			data, err := ioutil.ReadFile(path)
-			if err != nil {
+			if err := readTimestampFile(path, &r.Started); err != nil {
 				return nil, err
 			}
-			if err := started.UnmarshalText(data); err != nil {
+			continue
+		}
+		if f.Name() == "finished" {
+			if err := readTimestampFile(path, &r.Finished); err != nil {
 				return nil, err
 			}
 			continue
@@ -213,7 +229,7 @@ func loadOrigRunFiles(runDirPath string) (*Run, error) {
 		eil.Merge(*intervals)
 	}
 
-	r := &Run{Started: *started, Events: eil.ToMappedEvents()}
-
+	r.Duration = r.Finished.Sub(r.Started).String()
+	r.Events = eil.ToMappedEvents()
 	return r, nil
 }
