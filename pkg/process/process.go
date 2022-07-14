@@ -112,6 +112,19 @@ type Job struct {
 	Runs []Run
 }
 
+func LoadJob(workdir, jobName string) (*Job, error) {
+	data, err := ioutil.ReadFile(path.Join(workdir, processedDir, jobName+".json"))
+	if err != nil {
+		return nil, err
+	}
+	j := &Job{}
+	err = json.Unmarshal(data, j)
+	if err != nil {
+		return nil, err
+	}
+	return j, nil
+}
+
 func ProcessCachedJob(jobName, workdir string) error {
 	job, err := processCachedJob(jobName, workdir)
 	if err != nil {
