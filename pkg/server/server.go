@@ -3,12 +3,10 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/pmtk/e2e-events-history/pkg/fetch"
-	"github.com/pmtk/e2e-events-history/pkg/process"
 )
 
 const (
@@ -29,11 +27,11 @@ func Start(ctx context.Context, workdir string) {
 	})
 
 	r.GET("/job/:name", func(c *gin.Context) {
-		jobName := c.Param("name")
-		log.Println(jobName)
+		// jobName := c.Param("name")
+		// log.Println(jobName)
 
-		jobRunsData := &process.JobEvents{}
-		jobRunsData.FromFile("")
+		// jobRunsData := &process.JobEvents{}
+		// jobRunsData.FromFile("")
 
 		// jobs, err := loadJobsFromDisk()
 		// if err != nil {
