@@ -1,4 +1,4 @@
-package main
+package process
 
 import (
 	"encoding/json"
@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pmtk/e2e-events-history/pkg/fetch"
+	"github.com/pmtk/e2e-events-history/pkg/helpers"
 	"github.com/samber/lo"
 )
 
@@ -17,9 +19,9 @@ const (
 	processedDir = "processed"
 )
 
-func processCachedData(job string) error {
-	jobDir := path.Join(tmpWorkdir, originalArtifactsDir, job)
-	if exists, err := fileExists(jobDir); err != nil {
+func ProcessCachedData(job, workdir string) error {
+	jobDir := path.Join(workdir, fetch.OriginalArtifactsDir, job)
+	if exists, err := helpers.FileExists(jobDir); err != nil {
 		return err
 	} else if !exists {
 		return fmt.Errorf("couldn't find directory for job '%s', looked in '%s'", job, jobDir)
@@ -74,7 +76,7 @@ func processCachedData(job string) error {
 		}
 
 		jes := eil.ToJobEvents(job, d.Name(), started)
-		if err := jes.ToFile(path.Join(tmpWorkdir, processedDir, job, d.Name()+".json")); err != nil {
+		if err := jes.ToFile(path.Join(workdir, processedDir, job, d.Name()+".json")); err != nil {
 			return err
 		}
 	}
@@ -142,7 +144,7 @@ func (il *CIEventIntervalList) ToJobEvents(job, run string, started time.Time) *
 		return strings.Contains(ei.Locator, "disruption") && strings.Contains(ei.Message, "stopped responding")
 	})
 
-	partitioned := PartitionBy(filtered, func(ei CIEventInterval) string {
+	partitioned := helpers.PartitionBy(filtered, func(ei CIEventInterval) string {
 		return ei.Locator
 	})
 

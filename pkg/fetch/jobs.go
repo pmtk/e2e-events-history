@@ -1,4 +1,4 @@
-package main
+package fetch
 
 import (
 	"context"
@@ -24,13 +24,13 @@ type Jobs struct {
 	Jobs    []string
 }
 
-func initialAndPeriodicJobRefresh(ctx context.Context, interval time.Duration) error {
+func InitialAndPeriodicJobRefresh(ctx context.Context, workdir string, interval time.Duration) error {
 	refresh := func() error {
 		jobs, err := getJobs(ctx)
 		if err != nil {
 			return err
 		}
-		if err := storeJobs(jobs); err != nil {
+		if err := jobs.storeJobs(workdir); err != nil {
 			return err
 		}
 		return nil
@@ -88,9 +88,9 @@ func getJobs(ctx context.Context) (*Jobs, error) {
 	return &allJobs, nil
 }
 
-func storeJobs(jobs *Jobs) error {
+func (jobs *Jobs) storeJobs(workdir string) error {
 
-	if err := os.MkdirAll(tmpWorkdir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(workdir, os.ModePerm); err != nil {
 		return err
 	}
 
@@ -98,15 +98,15 @@ func storeJobs(jobs *Jobs) error {
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(path.Join(tmpWorkdir, jobsFile), b, 0644)
+	err = ioutil.WriteFile(path.Join(workdir, jobsFile), b, 0644)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func loadJobsFromDisk() (*Jobs, error) {
-	b, err := ioutil.ReadFile(path.Join(tmpWorkdir, jobsFile))
+func LoadJobsFromDisk(workdir string) (*Jobs, error) {
+	b, err := ioutil.ReadFile(path.Join(workdir, jobsFile))
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package main
+package helpers
 
 import (
 	"errors"
@@ -14,7 +14,7 @@ func PartitionBy[T any, K comparable](collection []T, iteratee func(x T) K) map[
 	return res
 }
 
-func fileExists(path string) (bool, error) {
+func FileExists(path string) (bool, error) {
 	if _, err := os.Stat(path); err == nil {
 		return true, nil
 	} else if errors.Is(err, os.ErrNotExist) {

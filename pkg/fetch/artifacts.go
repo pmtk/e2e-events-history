@@ -1,4 +1,4 @@
-package main
+package fetch
 
 import (
 	"bufio"
@@ -28,7 +28,7 @@ import (
 const (
 	bucketName           = "origin-ci-test"
 	bucketRootPath       = "logs"
-	originalArtifactsDir = "orig"
+	OriginalArtifactsDir = "orig"
 )
 
 var (
@@ -43,7 +43,7 @@ type JobRun struct {
 }
 
 // job "periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node", time.Date(2022, 7, 5, 0, 0, 0, 0, time.UTC)
-func fetchJobArtifacts(job string) error {
+func FetchJobArtifacts(job, workdir string) error {
 	log.Printf("Fetching artifacts for job '%s'\n", job)
 
 	r, err := getListOfJobRuns(context.Background(), job)
@@ -54,7 +54,7 @@ func fetchJobArtifacts(job string) error {
 
 	for _, run := range r {
 		log.Printf("Fetching artifacts for %s: %s\n", job, run.ID)
-		if err := fetchJobRunArtifact(run); err != nil {
+		if err := fetchJobRunArtifact(run, workdir); err != nil {
 			log.Printf("Error when fetching artifacts for %s: %s: %+v\n", job, run.ID, err)
 			return err
 		}
@@ -111,7 +111,7 @@ func getListOfJobRuns(ctx context.Context, jobName string) ([]JobRun, error) {
 	return runs, nil
 }
 
-func fetchJobRunArtifact(run JobRun) error {
+func fetchJobRunArtifact(run JobRun, workdir string) error {
 	ctx := context.TODO()
 
 	client, err := storage.NewClient(ctx, option.WithoutAuthentication())
@@ -142,7 +142,7 @@ func fetchJobRunArtifact(run JobRun) error {
 			continue
 		}
 
-		dir := path.Join(tmpWorkdir, originalArtifactsDir, run.Job, run.ID)
+		dir := path.Join(workdir, OriginalArtifactsDir, run.Job, run.ID)
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 			return err
 		}
