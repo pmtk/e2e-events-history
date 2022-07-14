@@ -24,22 +24,18 @@ type Jobs struct {
 	Jobs    []string
 }
 
-func InitialAndPeriodicJobRefresh(ctx context.Context, workdir string, interval time.Duration) error {
-	refresh := func() error {
-		jobs, err := getJobs(ctx)
-		if err != nil {
-			return err
-		}
-		if err := jobs.storeJobs(workdir); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if err := refresh(); err != nil {
+func RefreshJobList(ctx context.Context, workdir string) error {
+	jobs, err := getJobs(ctx)
+	if err != nil {
 		return err
 	}
+	if err := jobs.storeJobs(workdir); err != nil {
+		return err
+	}
+	return nil
+}
 
+func StartPeriodicRefreshJobList(ctx context.Context, workdir string, interval time.Duration) error {
 	ticker := time.NewTicker(interval)
 	go func() {
 		for {
@@ -47,7 +43,7 @@ func InitialAndPeriodicJobRefresh(ctx context.Context, workdir string, interval 
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				if err := refresh(); err != nil {
+				if err := RefreshJobList(ctx, workdir); err != nil {
 					fmt.Printf("Periodic job refresh failed: %+v\n", err)
 				}
 			}

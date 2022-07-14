@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/pmtk/e2e-events-history/pkg/fetch"
 	"github.com/pmtk/e2e-events-history/pkg/process"
 	"github.com/pmtk/e2e-events-history/pkg/server"
 )
@@ -17,7 +18,10 @@ func main() {
 	ctx := context.Background()
 	_ = ctx
 
-	// if err := initialAndPeriodicJobRefresh(ctx, time.Hour); err != nil {
+	if err := fetch.RefreshJobList(ctx, tmpWorkdir); err != nil {
+		panic(err)
+	}
+	// if err := fetch.StartPeriodicRefreshJobList(ctx, tmpWorkdir, time.Hour); err != nil {
 	// 	panic(err)
 	// }
 
