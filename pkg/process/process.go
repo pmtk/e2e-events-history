@@ -19,16 +19,18 @@ const (
 )
 
 type Interval struct {
-	From     time.Time
-	To       time.Time
-	Duration float64
+	From     time.Time `json:"from"`
+	To       time.Time `json:"to"`
+	Start    float64   `json:"start"`
+	End      float64   `json:"end"`
+	Duration float64   `json:"duration"`
 }
 
 type Event struct {
-	Level         string
-	Locator       string
-	Intervals     []Interval
-	TotalDuration float64
+	Level         string     `json:"level"`
+	Locator       string     `json:"locator"`
+	Intervals     []Interval `json:"intervals"`
+	TotalDuration float64    `json:"totalDuration"`
 }
 
 func (er Event) AddInterval(i Interval) Event {
@@ -60,6 +62,13 @@ func (er Event) AddInterval(i Interval) Event {
 		}, 0.0)
 
 	return er
+}
+
+func (er *Event) FillIntervalSecondsSinceJobStart(jobStart time.Time) {
+	for i := range er.Intervals {
+		er.Intervals[i].Start = er.Intervals[i].From.Sub(jobStart).Seconds()
+		er.Intervals[i].End = er.Intervals[i].To.Sub(jobStart).Seconds()
+	}
 }
 
 type CIEventInterval struct {
@@ -102,16 +111,16 @@ func (il *CIEventIntervalList) ToMappedEvents() map[string]Event {
 }
 
 type Run struct {
-	ID       string
-	Started  time.Time
-	Finished time.Time
-	Duration string
-	Events   map[string]Event
+	ID       string           `json:"id"`
+	Started  time.Time        `json:"started"`
+	Finished time.Time        `json:"finished"`
+	Duration float64          `json:"duration"`
+	Events   map[string]Event `json:"events"`
 }
 
 type Job struct {
-	Name string
-	Runs []Run
+	Name string `json:""`
+	Runs []Run  `json:""`
 }
 
 func LoadJob(workdir, jobName string) (*Job, error) {
@@ -229,7 +238,10 @@ func loadOrigRunFiles(runDirPath string) (*Run, error) {
 		eil.Merge(*intervals)
 	}
 
-	r.Duration = r.Finished.Sub(r.Started).String()
+	r.Duration = r.Finished.Sub(r.Started).Seconds()
 	r.Events = eil.ToMappedEvents()
+	for _, v := range r.Events {
+		v.FillIntervalSecondsSinceJobStart(r.Started)
+	}
 	return r, nil
 }
