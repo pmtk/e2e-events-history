@@ -41,8 +41,8 @@
 
         const vegaSpec = {
             "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-            "width": 900,
-            "height": 500,
+            "width": 1200,
+            "height": 700,
             "encoding": { "x": { "field": "started", "type": "nominal", "title": "Job start" } },
             "layer": [
                 {
@@ -53,7 +53,8 @@
                             "field": "minutes",
                             "type": "quantitative",
                             "title": "Job duration [min]",
-                            "axis": { "orient": "left", "titlePadding": 0 }
+                            "axis": { "orient": "left", "titlePadding": 0 },
+                            "scale": {"domain": [0, 230]}
                         }
                     }
                 },
@@ -69,7 +70,8 @@
                             "field": "ism",
                             "type": "quantitative",
                             "title": "Disruptions during the job",
-                            "axis": { "titleColor": "darkgray", "orient": "left", "titlePadding": 20 }
+                            "axis": { "titleColor": "darkgray", "orient": "left", "titlePadding": 20 },
+                            "scale": {"domain": [0, 230]}
                         },
                         "y2": { "field": "iem", "type": "quantitative" }
                     }
