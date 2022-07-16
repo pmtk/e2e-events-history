@@ -1,0 +1,87 @@
+<html>
+
+<body>
+    <form>
+        <fieldset disabled>
+            <div class="row mb-3">
+                <label for="jobSelect" class="col-sm-1 col-form-label">Job name</label>
+                <div class="col-sm-10">
+                    <select id="jobSelect" class="form-select">
+                        <option>periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node</option>
+                    </select>
+                </div>
+            </div>
+        </fieldset>
+
+        <div class="row mb-3">
+            <label for="metricSelect" class="col-sm-1 col-form-label">Metric</label>
+            <div class="col-sm-10">
+                <select id="metricSelect" class="form-select">
+                </select>
+            </div>
+        </div>
+    </form>
+
+
+
+
+    <div id="vis"></div>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2"
+        crossorigin="anonymous"></script>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/vega@5.21.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.2.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.20.2"></script>
+
+    <script>
+
+        vegaSpec = {
+            "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+            "width": 900,
+            "height": 500,
+            "data": { "url": "http://localhost:3000/job/periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node/disruption/cache-kube-api%20connection/new" },
+            "encoding": {
+                "x": { "field": "started", "type": "nominal", "title": "Job start" }
+            },
+            "layer": [
+                {
+                    "mark": { "type": "bar" },
+                    "transform": [{ "calculate": "datum.totalDuration/60", "as": "minutes" }],
+                    "encoding": { "y": { "field": "minutes", "type": "quantitative", "title": "Job duration [min]" } }
+                },
+                {
+                    "mark": { "type": "line", "color": "red" },
+                    "transform": [
+                        { "flatten": ["intervals"] },
+                        { "joinaggregate": [{ "op": "sum", "field": "intervals.duration", "as": "totalDisruption" }], "groupby": ["id"] }
+                    ],
+                    "encoding": { "y": { "field": "totalDisruption", "type": "quantitative", "title": "Total disruption time [s]" } }
+                },
+                {
+                    "mark": { "type": "bar", "color": "aqua" },
+                    "transform": [
+                        { "flatten": ["intervals"] },
+                        { "calculate": "datum.intervals.start/60", "as": "ism" },
+                        { "calculate": "datum.intervals.end/60", "as": "iem" }
+                    ],
+                    "encoding": {
+                        "y": { "field": "ism", "type": "quantitative", "title": "asd [s]" },
+                        "y2": { "field": "iem", "type": "quantitative", "title": "asd [s]" }
+                    }
+                }
+            ]
+        }
+
+        vegaEmbed("#vis", vegaSpec)
+            .then(result => console.log(result))
+            .catch(console.warn);
+    </script>
+</body>
+
+</html>
