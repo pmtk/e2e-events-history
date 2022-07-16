@@ -16,16 +16,13 @@
         <div class="row mb-3">
             <label for="metricSelect" class="col-sm-1 col-form-label">Metric</label>
             <div class="col-sm-10">
-                <select id="metricSelect" class="form-select">
-                </select>
+                <select id="metricSelect" class="form-select"></select>
             </div>
         </div>
     </form>
 
-
-
-
     <div id="vis"></div>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js"
@@ -40,20 +37,42 @@
     <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.20.2"></script>
 
     <script>
+        'use strict';
 
-        vegaSpec = {
+        const vegaSpec = {
             "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
             "width": 900,
             "height": 500,
-            "data": { "url": "http://localhost:3000/job/periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node/disruption/cache-kube-api%20connection/new" },
-            "encoding": {
-                "x": { "field": "started", "type": "nominal", "title": "Job start" }
-            },
+            "encoding": { "x": { "field": "started", "type": "nominal", "title": "Job start" } },
             "layer": [
                 {
                     "mark": { "type": "bar" },
                     "transform": [{ "calculate": "datum.totalDuration/60", "as": "minutes" }],
-                    "encoding": { "y": { "field": "minutes", "type": "quantitative", "title": "Job duration [min]" } }
+                    "encoding": {
+                        "y": {
+                            "field": "minutes",
+                            "type": "quantitative",
+                            "title": "Job duration [min]",
+                            "axis": { "orient": "left", "titlePadding": 0 }
+                        }
+                    }
+                },
+                {
+                    "mark": { "type": "bar", "color": "darkgray" },
+                    "transform": [
+                        { "flatten": ["intervals"] },
+                        { "calculate": "datum.intervals.start/60", "as": "ism" },
+                        { "calculate": "datum.intervals.end/60", "as": "iem" }
+                    ],
+                    "encoding": {
+                        "y": {
+                            "field": "ism",
+                            "type": "quantitative",
+                            "title": "Disruptions during the job",
+                            "axis": { "titleColor": "darkgray", "orient": "left", "titlePadding": 20 }
+                        },
+                        "y2": { "field": "iem", "type": "quantitative" }
+                    }
                 },
                 {
                     "mark": { "type": "line", "color": "red" },
@@ -61,26 +80,47 @@
                         { "flatten": ["intervals"] },
                         { "joinaggregate": [{ "op": "sum", "field": "intervals.duration", "as": "totalDisruption" }], "groupby": ["id"] }
                     ],
-                    "encoding": { "y": { "field": "totalDisruption", "type": "quantitative", "title": "Total disruption time [s]" } }
-                },
-                {
-                    "mark": { "type": "bar", "color": "aqua" },
-                    "transform": [
-                        { "flatten": ["intervals"] },
-                        { "calculate": "datum.intervals.start/60", "as": "ism" },
-                        { "calculate": "datum.intervals.end/60", "as": "iem" }
-                    ],
                     "encoding": {
-                        "y": { "field": "ism", "type": "quantitative", "title": "asd [s]" },
-                        "y2": { "field": "iem", "type": "quantitative", "title": "asd [s]" }
+                        "y": {
+                            "field": "totalDisruption",
+                            "type": "quantitative",
+                            "title": "Total disruption time [s]",
+                            "axis": { "orient": "right", "titleColor": "red" }
+                        }
                     }
                 }
-            ]
+            ],
+            "resolve": { "scale": { "y": "independent" } }
         }
 
-        vegaEmbed("#vis", vegaSpec)
-            .then(result => console.log(result))
-            .catch(console.warn);
+
+        $.getJSON("http://localhost:3000/job/periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node", function (data) {
+            console.log(data)
+            var sel = $("#metricSelect")
+            sel.empty()
+            sel.append(`<option value=""></option>`)
+            data.metrics.forEach(e => {
+                sel.append(`<option value="${e}">${e}</option>`)
+            });
+        })
+
+        $("#metricSelect").on("change", function () {
+            if (this.value === "") {
+                $("#vis").empty()
+                return
+            }
+            console.log(`metric selected: ${this.value}`)
+
+            let newSpec = Object.assign({},
+                { "data": { "url": `http://localhost:3000/job/periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node/${this.value}` } },
+                vegaSpec)
+            console.log(newSpec["data"])
+
+            vegaEmbed("#vis", newSpec)
+                .then(result => console.log(result))
+                .catch(console.warn);
+        })
+
     </script>
 </body>
 
