@@ -2,16 +2,15 @@
 
 <body>
     <form>
-        <fieldset disabled>
-            <div class="row mb-3">
-                <label for="jobSelect" class="col-sm-1 col-form-label">Job name</label>
-                <div class="col-sm-10">
-                    <select id="jobSelect" class="form-select">
-                        <option>periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node</option>
-                    </select>
-                </div>
+        <div class="row mb-3">
+            <label for="jobSelect" class="col-sm-1 col-form-label">Job name</label>
+            <div class="col-sm-10">
+                <select id="jobSelect" class="form-select">
+                    <option>periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node</option>
+                    <option>periodic-ci-openshift-release-master-nightly-4.11-e2e-aws-single-node</option>
+                </select>
             </div>
-        </fieldset>
+        </div>
 
         <div class="row mb-3">
             <label for="metricSelect" class="col-sm-1 col-form-label">Metric</label>
@@ -54,7 +53,7 @@
                             "type": "quantitative",
                             "title": "Job duration [min]",
                             "axis": { "orient": "left", "titlePadding": 0 },
-                            "scale": {"domain": [0, 230]}
+                            "scale": { "domain": [0, 500] }
                         }
                     }
                 },
@@ -71,7 +70,7 @@
                             "type": "quantitative",
                             "title": "Disruptions during the job",
                             "axis": { "titleColor": "darkgray", "orient": "left", "titlePadding": 20 },
-                            "scale": {"domain": [0, 230]}
+                            "scale": { "domain": [0, 500] }
                         },
                         "y2": { "field": "iem", "type": "quantitative" }
                     }
@@ -96,15 +95,24 @@
         }
 
 
-        $.getJSON("http://localhost:3000/job/periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node", function (data) {
-            console.log(data)
-            var sel = $("#metricSelect")
-            sel.empty()
-            sel.append(`<option value=""></option>`)
-            data.metrics.forEach(e => {
-                sel.append(`<option value="${e}">${e}</option>`)
-            });
+        $("#jobSelect").on("change", function () {
+            if (this.value === "") {
+                $("#vis").empty()
+                return
+            }
+            console.log(`job selected: ${this.value}`)
+
+            $.getJSON(`http://localhost:3000/job/${this.value}`, function (data) {
+                console.log(data)
+                var sel = $("#metricSelect")
+                sel.empty()
+                sel.append(`<option value=""></option>`)
+                data.metrics.forEach(e => {
+                    sel.append(`<option value="${e}">${e}</option>`)
+                });
+            })
         })
+
 
         $("#metricSelect").on("change", function () {
             if (this.value === "") {
@@ -113,8 +121,10 @@
             }
             console.log(`metric selected: ${this.value}`)
 
+            const job = $("#jobSelect").val()
+
             let newSpec = Object.assign({},
-                { "data": { "url": `http://localhost:3000/job/periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node/${this.value}` } },
+                { "data": { "url": `http://localhost:3000/job/${job}/${this.value}` } },
                 vegaSpec)
             console.log(newSpec["data"])
 

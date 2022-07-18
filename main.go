@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/pmtk/e2e-events-history/pkg/fetch"
 	"github.com/pmtk/e2e-events-history/pkg/process"
@@ -26,24 +27,29 @@ func main() {
 	fmt.Printf("Starting\n")
 	ctx := context.Background()
 
-	fmt.Printf("Fetching list of jobs...")
-	if err := fetch.RefreshJobList(ctx, tmpWorkdir); err != nil {
-		panic(err)
-	}
-	fmt.Printf("\tdone\n")
+	// fmt.Printf("Fetching list of jobs...")
+	// if err := fetch.RefreshJobList(ctx, tmpWorkdir); err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Printf("\tdone\n")
 	// if err := fetch.StartPeriodicRefreshJobList(ctx, tmpWorkdir, time.Hour); err != nil { panic(err) }
 
-	job := "periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node"
-	fmt.Printf("Fetching artifacts for %s...\n", job)
-	if err := fetch.FetchJobArtifacts(job, tmpWorkdir); err != nil {
-		panic(err)
+	jobs := []string{
+		"periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node",
+		"periodic-ci-openshift-release-master-nightly-4.11-e2e-aws-single-node",
 	}
+	for _, job := range jobs {
+		fmt.Printf("Fetching artifacts for %s...\n", job)
+		if err := fetch.FetchJobArtifacts(job, tmpWorkdir); err != nil {
+			log.Panicf("%+v\n", err)
+		}
 
-	fmt.Printf("Processing artifacts for %s...", job)
-	if err := process.ProcessCachedJob(job, tmpWorkdir); err != nil {
-		panic(err)
+		fmt.Printf("Processing artifacts for %s...", job)
+		if err := process.ProcessCachedJob(job, tmpWorkdir); err != nil {
+			log.Panicf("%+v\n", err)
+		}
+		fmt.Printf("\tdone\n")
 	}
-	fmt.Printf("\tdone\n")
 
 	go server.Start(ctx, tmpWorkdir)
 	<-ctx.Done()

@@ -59,6 +59,7 @@ func LoadJobMetric(workdir, jobName, metric string) (*JobASD, error) {
 			ID:            r.ID,
 			Started:       r.Started,
 			TotalDuration: r.Duration,
+			Intervals:     make([]IntervalASD, 0),
 		}
 
 		for key, event := range r.Events {

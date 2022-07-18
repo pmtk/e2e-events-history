@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	e2eFilesWhitelist = []string{"e2e-timelines_everything_"}
+	e2eFilesWhitelist = []string{"e2e-timelines_everything_", "e2e-intervals_everything_"}
 )
 
 type JobRun struct {
@@ -45,7 +45,7 @@ type JobRun struct {
 
 // job "periodic-ci-openshift-release-master-ci-4.11-e2e-aws-upgrade-ovn-single-node", time.Date(2022, 7, 5, 0, 0, 0, 0, time.UTC)
 func FetchJobArtifacts(job, workdir string) error {
-	log.Printf("Fetching artifacts for job '%s'\n", job)
+	log.Printf("Fetching list of job '%s' runs\n", job)
 
 	r, err := getListOfJobRuns(context.Background(), job)
 	if err != nil {
@@ -71,6 +71,7 @@ func getListOfJobRuns(ctx context.Context, jobName string) ([]JobRun, error) {
 
 	bucket := client.Bucket(bucketName)
 	query := &storage.Query{Delimiter: "/", Prefix: path.Join(bucketRootPath, jobName) + "/"}
+	query.SetAttrSelection([]string{"Prefix"})
 	runs := []JobRun{}
 
 	getTimestampFromFile := func(prefix, filename string) (time.Time, error) {
@@ -102,9 +103,6 @@ func getListOfJobRuns(ctx context.Context, jobName string) ([]JobRun, error) {
 		if attrs.Prefix == "" {
 			continue
 		}
-
-		var t time.Time
-		_ = t
 
 		started, err := getTimestampFromFile(attrs.Prefix, "started.json")
 		if err != nil {

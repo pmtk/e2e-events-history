@@ -2,6 +2,7 @@ package process
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path"
 	"sort"
@@ -55,7 +56,7 @@ func (il *CIEventIntervalList) ToMappedEvents() map[string]Event {
 func processCachedJob(jobName, workdir string) (*Job, error) {
 	jobDir := path.Join(workdir, fetch.OriginalArtifactsDir, jobName)
 	if _, err := helpers.FileExists(jobDir); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to access job directory ('%s'): %w", jobDir, err)
 	}
 
 	runDirs, err := ioutil.ReadDir(jobDir)
